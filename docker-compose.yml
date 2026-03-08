@@ -1,0 +1,22 @@
+services:
+  tokscale-hub:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "${HUB_PORT:-7171}:7171"
+    environment:
+      HUB_TOKEN: ${HUB_TOKEN}
+      HUB_SECRET: ${HUB_SECRET:-}
+      HUB_AUTO_PUSH: ${HUB_AUTO_PUSH:-0}
+      HUB_UPSTREAM: ${HUB_UPSTREAM:-https://tokscale.ai}
+      HUB_STORE_PATH: /data/hub-store.json
+    volumes:
+      - hub-data:/data
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:7171/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  hub-data:

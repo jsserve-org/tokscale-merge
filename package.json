@@ -1,0 +1,11 @@
+{
+  "name": "tokscale-hub",
+  "version": "1.0.0",
+  "description": "Local aggregation hub for tokscale — merge multi-device usage before pushing to tokscale.ai",
+  "type": "module",
+  "scripts": {
+    "start": "bun run server.ts",
+    "dev": "bun --watch run server.ts"
+  },
+  "dependencies": {}
+}

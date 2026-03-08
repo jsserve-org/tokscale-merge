@@ -1,0 +1,4 @@
+hub-store.json
+node_modules
+.env
+*.log
