@@ -1,6 +1,7 @@
 services:
   tokscale-hub:
     build: .
+    image: ghcr.io/jsserve-org/tokscale-hub
     restart: unless-stopped
     ports:
       - "${HUB_PORT:-7171}:7171"
