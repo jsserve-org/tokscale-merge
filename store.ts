@@ -23,7 +23,12 @@ export function saveStore(store: HubStore): void {
   if (dir && dir !== "." && !existsSync(dir)) {
     mkdirSync(dir, { recursive: true });
   }
-  writeFileSync(STORE_PATH, JSON.stringify(store, null, 2));
+  try {
+    writeFileSync(STORE_PATH, JSON.stringify(store, null, 2));
+  } catch (err) {
+    console.error("[store] Failed to write store file:", STORE_PATH, err);
+    throw err;
+  }
 }
 
 export function upsertSubmission(

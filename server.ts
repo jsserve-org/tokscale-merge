@@ -312,5 +312,16 @@ To push merged data to tokscale.ai:
 Bun.serve({
   port: PORT,
   hostname: "0.0.0.0",
-  fetch: handleRequest,
+  fetch: async (req) => {
+    try {
+      return await handleRequest(req);
+    } catch (err) {
+      console.error("[hub] Unhandled error:", err);
+      return json({ error: "Internal server error", detail: String(err) }, 500);
+    }
+  },
+  error(err) {
+    console.error("[hub] Server error:", err);
+    return json({ error: "Internal server error", detail: String(err) }, 500);
+  },
 });
