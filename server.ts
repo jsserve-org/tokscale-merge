@@ -216,7 +216,15 @@ async function handleRequest(req: Request): Promise<Response> {
     const deviceId = deviceIdFromRequest(req);
     const store = loadStore();
     upsertSubmission(store, deviceId, payload);
-    saveStore(store);
+
+    const warnings: string[] = [];
+
+    try {
+      saveStore(store);
+    } catch (err) {
+      console.error("[hub] Failed to persist submission — data may be lost:", err);
+      warnings.push("Warning: hub failed to persist your submission to disk.");
+    }
 
     console.log(
       `[hub] Stored submission from ${deviceId} — ` +
@@ -225,16 +233,27 @@ async function handleRequest(req: Request): Promise<Response> {
     );
 
     if (AUTO_PUSH && listSubmissions(store).length > 0) {
-      const subs = listSubmissions(store);
-      const merged = mergeContributions(subs.map((s) => s.data));
-      const { results, allOk } = await pushToUpstream(merged);
-      if (allOk) {
-        store.lastPushedAt = new Date().toISOString();
-        saveStore(store);
-        console.log(`[hub] Auto-pushed merged data to ${HUB_TOKENS.length} token(s)`);
-      } else {
-        console.error("[hub] Auto-push failed:", results.filter((r) => !r.ok));
+      try {
+        const subs = listSubmissions(store);
+        const merged = mergeContributions(subs.map((s) => s.data));
+        const { results, allOk } = await pushToUpstream(merged);
+        if (allOk) {
+          store.lastPushedAt = new Date().toISOString();
+          try { saveStore(store); } catch { /* best-effort timestamp update */ }
+          console.log(`[hub] Auto-pushed merged data to ${HUB_TOKENS.length} token(s)`);
+        } else {
+          const failed = results.filter((r) => !r.ok);
+          console.error("[hub] Auto-push failed:", failed);
+          warnings.push(`Auto-push to upstream failed (${failed.length}/${results.length} token(s)).`);
+        }
+      } catch (err) {
+        console.error("[hub] Auto-push error:", err);
+        warnings.push("Auto-push encountered an unexpected error — submission is stored locally.");
       }
+    }
+
+    if (!AUTO_PUSH) {
+      warnings.push("Data stored in hub. Run POST /api/hub/push to forward to tokscale.ai.");
     }
 
     // Return a success response that matches what tokscale.ai returns
@@ -247,9 +266,7 @@ async function handleRequest(req: Request): Promise<Response> {
         totalCost: payload.summary.totalCost,
         activeDays: payload.summary.activeDays,
       },
-      warnings: AUTO_PUSH
-        ? []
-        : ["Data stored in hub. Run POST /api/hub/push to forward to tokscale.ai."],
+      warnings,
     });
   }
 
